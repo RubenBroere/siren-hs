@@ -35,6 +35,10 @@ ghc-options:
 
 library:
   source-dirs: src
+  dependencies:
+  - containers
+  - diagrams-lib
+  - diagrams-svg
 
 executables:
   siren-hs-exe:
@@ -45,6 +49,7 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
+    - directory
     - siren-hs
 
 tests:
@@ -56,4 +61,9 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
+    - containers
+    - directory
     - siren-hs
+    - tasty
+    - tasty-hunit
+    - tasty-quickcheck

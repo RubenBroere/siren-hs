@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.39.1.
+-- This file has been generated from package.yaml by hpack version 0.38.1.
 --
 -- see: https://github.com/sol/hpack
 
@@ -25,7 +25,11 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
+      Siren
+      Siren.EDSL
+      Siren.Layout
+      Siren.Render.SVG
+      Siren.Types
   other-modules:
       Paths_siren_hs
   hs-source-dirs:
@@ -33,17 +37,22 @@ library
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       base >=4.7 && <5
+    , containers
+    , diagrams-lib
+    , diagrams-svg
   default-language: Haskell2010
 
 executable siren-hs-exe
   main-is: Main.hs
   other-modules:
+      Samples
       Paths_siren_hs
   hs-source-dirs:
       app
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , directory
     , siren-hs
   default-language: Haskell2010
 
@@ -51,11 +60,21 @@ test-suite siren-hs-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Siren.EDSLSpec
+      Siren.LayoutSpec
+      Siren.Render.SVGSpec
+      Siren.SirenSpec
+      Siren.TypesSpec
       Paths_siren_hs
   hs-source-dirs:
       test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , containers
+    , directory
     , siren-hs
+    , tasty
+    , tasty-hunit
+    , tasty-quickcheck
   default-language: Haskell2010
