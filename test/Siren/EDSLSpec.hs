@@ -33,14 +33,14 @@ prop_unlabeledEdgeEquivalent aId bId aLabel bLabel =
     buildGraph builderUsingEdge === buildGraph builderUsingEdgeWithLabel
   where
     builderUsingEdge =
-        node aId aLabel <>
-        node bId bLabel <>
-        edge aId bId
+            node aId aLabel <>
+            node bId bLabel <>
+            edge aId bId
 
     builderUsingEdgeWithLabel =
-        node aId aLabel <>
-        node bId bLabel <>
-        edgeWithLabel aId bId Nothing
+            node aId aLabel <>
+            node bId bLabel <>
+            edgeWithLabel aId bId Nothing
 
 contains :: Eq a => [a] -> [a] -> Bool
 contains needle haystack = any (needle `prefixOf`) (tails haystack)

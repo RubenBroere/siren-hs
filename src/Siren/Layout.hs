@@ -1,56 +1,56 @@
-{- 
-Sugiyama, K., Tagawa, S., & Toda, M. (1981). "Methods for Visual Understanding 
-of Hierarchical System Structures." /IEEE Transactions on Systems, Man, and Cybernetics/, 
+{-
+Sugiyama, K., Tagawa, S., & Toda, M. (1981). "Methods for Visual Understanding
+of Hierarchical System Structures." /IEEE Transactions on Systems, Man, and Cybernetics/,
 SMC-11(2), 109-125. <https://doi.org/10.1109/TSMC.1981.4308636>
 
-"Layered graph drawing" on Wikipedia: 
+"Layered graph drawing" on Wikipedia:
 <https://en.wikipedia.org/wiki/Layered_graph_drawing>
 
-Battista, G. D., Eades, P., Tamassia, R., & Tollis, I. G. (1998). 
-/Graph Drawing: Algorithms for the Visualization of Graphs/. 
+Battista, G. D., Eades, P., Tamassia, R., & Tollis, I. G. (1998).
+/Graph Drawing: Algorithms for the Visualization of Graphs/.
 Prentice Hall. Chapter 9: Layered Drawings of Digraphs.
 -}
 
 module Siren.Layout
-    ( Direction (..)
-    , PositionedNode (..)
-    , LaidOutGraph (..)
-    , layoutSugiyamaLike
-    , layoutUniformBoxWidth
-    , layoutNodeDimensions
-    , layoutBounds
-    )
+  ( Direction(..)
+  , PositionedNode(..)
+  , LaidOutGraph(..)
+  , layoutSugiyamaLike
+  , layoutUniformBoxWidth
+  , layoutNodeDimensions
+  , layoutBounds
+  )
 where
 
 import Data.List (nub, sortOn)
-import Data.Ord (Down (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Ord (Down(..))
 import Siren.Types
 
 -- | The direction in which the graph should flow.
 data Direction
-    = TopDown    -- ^ Nodes flow from top to bottom (root at top)
-    | LeftRight  -- ^ Nodes flow from left to right (root at left)
-    deriving (Eq, Show)
+  = TopDown    -- ^ Nodes flow from top to bottom (root at top)
+  | LeftRight  -- ^ Nodes flow from left to right (root at left)
+  deriving (Eq, Show)
 
 -- | A node that has been assigned a 2D position and rank.
 data PositionedNode = PositionedNode
-    { positionedNode :: Node   -- ^ The original node
-    , positionedX :: Double    -- ^ X-coordinate in the layout
-    , positionedY :: Double    -- ^ Y-coordinate in the layout
-    , positionedRank :: Int    -- ^ Hierarchical layer/rank (0 is the root layer)
-    }
-    deriving (Eq, Show)
+  { positionedNode :: Node   -- ^ The original node
+  , positionedX :: Double    -- ^ X-coordinate in the layout
+  , positionedY :: Double    -- ^ Y-coordinate in the layout
+  , positionedRank :: Int    -- ^ Hierarchical layer/rank (0 is the root layer)
+  }
+  deriving (Eq, Show)
 
 -- | A graph with all nodes positioned in 2D space.
 data LaidOutGraph = LaidOutGraph
-    { layoutNodes :: [PositionedNode]  -- ^ Positioned nodes
-    , layoutEdges :: [Edge]            -- ^ Original edges from the graph
-    }
-    deriving (Eq, Show)
+  { layoutNodes :: [PositionedNode]  -- ^ Positioned nodes
+  , layoutEdges :: [Edge]            -- ^ Original edges from the graph
+  }
+  deriving (Eq, Show)
 
-{-| 
+{-|
 Performs a simplified Sugiyama-style layered layout on a directed graph.
 
 The Sugiyama framework is a widely-used method for drawing directed graphs
@@ -68,7 +68,7 @@ to minimize horizontal spread within each layer.
 __Algorithm Steps:__
 
 [@Step 1: Rank Assignment@]
-  Each node is assigned a /rank/ (layer) based on its dependencies. 
+  Each node is assigned a /rank/ (layer) based on its dependencies.
   A node's rank is defined as the maximum rank of its predecessors plus one.
   Root nodes (those with no incoming edges) are assigned rank 0.
   This is computed iteratively until convergence (see 'computeRanks').
@@ -102,36 +102,36 @@ sortedNodes = sortOn positionedRank (layoutNodes layout)
 -}
 layoutSugiyamaLike :: Direction -> Graph -> LaidOutGraph
 layoutSugiyamaLike direction graph =
-    let nodeList = Map.elems (graphNodes graph)
-        rankMap = computeRanks nodeList (graphEdges graph)
-        rankedNodes =
-            sortOn
-                (\currentNode ->
-                    ( Map.findWithDefault 0 (nodeId currentNode) rankMap
-                    , unNodeId (nodeId currentNode)
-                    )
-                )
-                nodeList
-        positionMap = assignCoordinates direction rankMap rankedNodes
-        positioned =
-            fmap
-                (\currentNode ->
-                    let (xPos, yPos) = Map.findWithDefault (0.0, 0.0) (nodeId currentNode) positionMap
-                        nodeRank = Map.findWithDefault 0 (nodeId currentNode) rankMap
-                     in PositionedNode
-                            { positionedNode = currentNode
-                            , positionedX = xPos
-                            , positionedY = yPos
-                            , positionedRank = nodeRank
-                            }
-                )
-                rankedNodes
-     in LaidOutGraph
-            { layoutNodes = positioned
-            , layoutEdges = graphEdges graph
-            }
+  LaidOutGraph
+    { layoutNodes = positionedNodes
+    , layoutEdges = graphEdges graph
+    }
+  where
+    nodeList = Map.elems (graphNodes graph)
+    rankMap = computeRanks nodeList (graphEdges graph)
+    rankedNodes = sortOn (nodeSortKey rankMap) nodeList
+    positionMap = assignCoordinates direction rankMap rankedNodes
+    positionedNodes = fmap (mkPositionedNode rankMap positionMap) rankedNodes
 
-{-| 
+nodeSortKey :: Map NodeId Int -> Node -> (Int, String)
+nodeSortKey rankMap currentNode =
+  ( Map.findWithDefault 0 (nodeId currentNode) rankMap
+  , unNodeId (nodeId currentNode)
+  )
+
+mkPositionedNode :: Map NodeId Int -> Map NodeId (Double, Double) -> Node -> PositionedNode
+mkPositionedNode rankMap positionMap currentNode =
+  PositionedNode
+    { positionedNode = currentNode
+    , positionedX = xPos
+    , positionedY = yPos
+    , positionedRank = nodeRank
+    }
+  where
+    (xPos, yPos) = Map.findWithDefault (0.0, 0.0) (nodeId currentNode) positionMap
+    nodeRank = Map.findWithDefault 0 (nodeId currentNode) rankMap
+
+{-|
 Computes the rank (layer) for each node in the graph using an iterative approach.
 
 __Algorithm__: This implements a /balanced layer assignment/ method that:
@@ -152,7 +152,7 @@ in final rank assignment to minimize total height.
 __Process__:
 
 1. Initialize all nodes to rank 0
-2. For each edge (u → v), ensure that minimumRank(v) ≥ minimumRank(u) + 1
+2. For each edge (u -> v), ensure that minimumRank(v) >= minimumRank(u) + 1
 3. Repeat until fixed point (minimum rank computation)
 4. Apply balancing: try to reduce node ranks where possible without violating constraints
 5. The iteration limit (2n) prevents infinite loops in cyclic graphs
@@ -178,56 +178,57 @@ A mapping from each node ID to its computed rank (layer number).
 -}
 computeRanks :: [Node] -> [Edge] -> Map NodeId Int
 computeRanks nodes edges =
-    let minimumRanks = computeMinimumRanks nodes edges
-        balancedRanks = balanceRanks minimumRanks edges
-     in balancedRanks
+  balanceRanks minimumRanks edges
   where
-    -- Compute minimum feasible ranks using longest path
-    computeMinimumRanks nodes' edges' =
-        iterateRanks 0 (initialRanks nodes')
+    minimumRanks = computeMinimumRanks nodes edges
+
+computeMinimumRanks :: [Node] -> [Edge] -> Map NodeId Int
+computeMinimumRanks nodes edges = iterateRanks 0 initialRanks
+  where
+    initialRanks = Map.fromList (fmap (\currentNode -> (nodeId currentNode, 0)) nodes)
+    maxIterations = max 1 (length nodes * 2)
+
+    iterateRanks iteration ranks
+      | iteration >= maxIterations = ranks
+      | updated == ranks = ranks
+      | otherwise = iterateRanks (iteration + 1) updated
       where
-        initialRanks = Map.fromList . fmap (\currentNode -> (nodeId currentNode, 0))
-        maxIterations = max 1 (length nodes' * 2)
+        updated = foldl updateRank ranks edges
 
-        iterateRanks iteration ranks
-            | iteration >= maxIterations = ranks
-            | otherwise =
-                let updated = foldl updateRank ranks edges'
-                 in if updated == ranks
-                        then ranks
-                        else iterateRanks (iteration + 1) updated
+updateRank :: Map NodeId Int -> Edge -> Map NodeId Int
+updateRank ranks edgeValue =
+  case (Map.lookup (edgeFrom edgeValue) ranks, Map.lookup (edgeTo edgeValue) ranks) of
+    (Just fromRank, Just toRank)
+      | toRank < fromRank + 1 -> Map.insert (edgeTo edgeValue) (fromRank + 1) ranks
+      | otherwise -> ranks
+    _ -> ranks
 
-        updateRank ranks edgeValue =
-            case (Map.lookup (edgeFrom edgeValue) ranks, Map.lookup (edgeTo edgeValue) ranks) of
-                (Just fromRank, Just toRank)
-                    | toRank < fromRank + 1 -> Map.insert (edgeTo edgeValue) (fromRank + 1) ranks
-                    | otherwise -> ranks
-                _ -> ranks
+balanceRanks :: Map NodeId Int -> [Edge] -> Map NodeId Int
+balanceRanks minimumRanks edges = foldl (tryMoveNodeUp edges) minimumRanks orderedNodes
+  where
+    orderedNodes = sortOn (Down . (minimumRanks Map.!)) (Map.keys minimumRanks)
 
-    -- Balancing phase: try to reduce maximum rank while respecting constraints
-    balanceRanks minRanks edges' =
-        foldl tryMoveNodeUp minRanks (sortOn (Down . (minRanks Map.!)) (Map.keys minRanks))
+tryMoveNodeUp :: [Edge] -> Map NodeId Int -> NodeId -> Map NodeId Int
+tryMoveNodeUp edges ranks nodeIdValue =
+  case Map.lookup nodeIdValue ranks of
+    Nothing -> ranks
+    Just currentRank
+      | currentRank <= 0 -> ranks
+      | not canMoveUp -> ranks
+      | otherwise -> tryMoveNodeUp edges (Map.insert nodeIdValue candidateRank ranks) nodeIdValue
       where
-        tryMoveNodeUp ranks nodeId' =
-            -- Try to move node up (reduce rank) if all its predecessors still satisfy constraints
-            case Map.lookup nodeId' ranks of
-              Nothing -> ranks
-              Just currentRank
-                | currentRank <= 0 -> ranks
-                | otherwise ->
-                    let candidateRank = currentRank - 1
-                        -- Check if any incoming edge would be violated by moving up
-                        canMoveUp = all (\edge -> 
-                          if edgeTo edge == nodeId'
-                          then case Map.lookup (edgeFrom edge) ranks of
-                                 Just sourceRank -> candidateRank > sourceRank
-                                 Nothing -> True
-                          else True) edges'
-                     in if canMoveUp
-                        then Map.insert nodeId' candidateRank (tryMoveNodeUp ranks nodeId')
-                        else ranks
+        candidateRank = currentRank - 1
+        canMoveUp = all (preservesIncomingConstraint ranks candidateRank nodeIdValue) edges
 
-{-| 
+preservesIncomingConstraint :: Map NodeId Int -> Int -> NodeId -> Edge -> Bool
+preservesIncomingConstraint ranks candidateRank nodeIdValue edgeValue
+  | edgeTo edgeValue /= nodeIdValue = True
+  | otherwise =
+      case Map.lookup (edgeFrom edgeValue) ranks of
+        Just sourceRank -> candidateRank > sourceRank
+        Nothing -> True
+
+{-|
 Assigns 2D coordinates to all nodes based on their ranks.
 
 __Algorithm__: For each rank (layer), nodes are positioned:
@@ -264,35 +265,42 @@ __Returns:__
 A mapping from each node ID to its (x, y) coordinate pair.
 -}
 assignCoordinates :: Direction -> Map NodeId Int -> [Node] -> Map NodeId (Double, Double)
-assignCoordinates direction rankMap nodes =
-    let ranks = sortOn id . nub $ fmap (\n -> Map.findWithDefault 0 (nodeId n) rankMap) nodes
-        xSpacing = 5.5  -- Horizontal spacing between nodes in same rank
-        ySpacing = 4.0  -- Vertical spacing between ranks
-     in foldl (assignRankNodes xSpacing ySpacing) Map.empty ranks
+assignCoordinates direction rankMap nodes = foldl assignRank Map.empty ranks
   where
-    -- Process all nodes in a single rank
-    assignRankNodes xSpacing ySpacing acc currentRank =
-        let nodesInRank =
-                sortOn (unNodeId . nodeId) . filter (\n -> Map.findWithDefault 0 (nodeId n) rankMap == currentRank) $ nodes
-            -- Center the nodes horizontally around x=0
-            startOffset = negate (fromIntegral (length nodesInRank - 1) * xSpacing / 2.0)
-            placed = zipWith (toPlacement startOffset) ([0 :: Int ..]) nodesInRank
-         in foldl
-                (\positionMap (currentNode, xPos, yPos) -> Map.insert (nodeId currentNode) (transform direction xPos yPos) positionMap)
-                acc
-                placed
-      where
-        -- Compute position for a single node in the rank
-        toPlacement startOffset index currentNode =
-            let xPos = startOffset + fromIntegral index * xSpacing
-                yPos = negate (fromIntegral currentRank * ySpacing)  -- Negative so rank 0 is at top
-             in (currentNode, xPos, yPos)
+    xSpacing = 5.5
+    ySpacing = 4.0
+    ranks = sortOn id . nub $ fmap (\nodeValue -> Map.findWithDefault 0 (nodeId nodeValue) rankMap) nodes
+    assignRank positionMap currentRank =
+      let nodesInRank = nodesForRank rankMap nodes currentRank
+          placements = placeNodesInRank xSpacing ySpacing currentRank nodesInRank
+       in foldl (insertPlacement direction) positionMap placements
 
-{-| 
+nodesForRank :: Map NodeId Int -> [Node] -> Int -> [Node]
+nodesForRank rankMap nodes currentRank =
+  sortOn (unNodeId . nodeId) (filter isInRank nodes)
+  where
+    isInRank nodeValue = Map.findWithDefault 0 (nodeId nodeValue) rankMap == currentRank
+
+placeNodesInRank :: Double -> Double -> Int -> [Node] -> [(Node, Double, Double)]
+placeNodesInRank xSpacing ySpacing currentRank nodesInRank =
+  zipWith (toPlacement startOffset) [0 :: Int ..] nodesInRank
+  where
+    startOffset = negate (fromIntegral (length nodesInRank - 1) * xSpacing / 2.0)
+    yPos = negate (fromIntegral currentRank * ySpacing)
+
+    toPlacement offset index currentNode =
+      let xPos = offset + fromIntegral index * xSpacing
+       in (currentNode, xPos, yPos)
+
+insertPlacement :: Direction -> Map NodeId (Double, Double) -> (Node, Double, Double) -> Map NodeId (Double, Double)
+insertPlacement direction positionMap (currentNode, xPos, yPos) =
+  Map.insert (nodeId currentNode) (transform direction xPos yPos) positionMap
+
+{-|
 Transforms coordinates based on the layout direction.
 
 * 'TopDown': No transformation - x is horizontal, y is vertical (increasing downward)
-* 'LeftRight': Rotates 90° clockwise - x becomes vertical (upward), y becomes horizontal (rightward)
+* 'LeftRight': Rotates 90 degrees clockwise - x becomes vertical (upward), y becomes horizontal (rightward)
 
 __Parameters:__
 
@@ -308,9 +316,9 @@ The transformed (x, y) coordinate pair.
 -}
 transform :: Direction -> Double -> Double -> (Double, Double)
 transform direction xPos yPos =
-    case direction of
-        TopDown -> (xPos, yPos)
-        LeftRight -> (negate yPos, xPos)  -- Rotate 90° clockwise
+  case direction of
+    TopDown -> (xPos, yPos)
+    LeftRight -> (negate yPos, xPos)
 
 layoutNodeMinWidth :: Double
 layoutNodeMinWidth = 3.2
@@ -326,61 +334,58 @@ layoutNodeHeight = 1.8
 
 layoutNodeWidthForLabel :: String -> Double
 layoutNodeWidthForLabel labelText =
-    max layoutNodeMinWidth (fromIntegral (length labelText) * layoutNodeWidthPerChar + layoutNodeHorizontalPadding)
+  max layoutNodeMinWidth (fromIntegral (length labelText) * layoutNodeWidthPerChar + layoutNodeHorizontalPadding)
 
 layoutUniformBoxWidth :: LaidOutGraph -> Double
 layoutUniformBoxWidth graph =
-    case nonDiamondWidths of
-        [] -> layoutNodeMinWidth
-        widths -> maximum widths
+  case nonDiamondWidths of
+    [] -> layoutNodeMinWidth
+    widths -> maximum widths
   where
     nonDiamondWidths =
-        [ layoutNodeWidthForLabel (nodeLabel (positionedNode positionedNodeValue))
-        | positionedNodeValue <- layoutNodes graph
-        , nodeShape (positionedNode positionedNodeValue) /= Diamond
-        ]
+      [ layoutNodeWidthForLabel (nodeLabel (positionedNode positionedNodeValue))
+      | positionedNodeValue <- layoutNodes graph
+      , nodeShape (positionedNode positionedNodeValue) /= Diamond
+      ]
 
 layoutNodeDimensions :: Double -> Node -> (Double, Double)
 layoutNodeDimensions uniformBoxWidth nodeValue =
-    case nodeShape nodeValue of
-        Diamond -> (layoutNodeWidthForLabel (nodeLabel nodeValue), layoutNodeHeight)
-        Rectangle -> (uniformBoxWidth, layoutNodeHeight)
-        RoundedRectangle -> (uniformBoxWidth, layoutNodeHeight)
+  case nodeShape nodeValue of
+    Diamond -> (layoutNodeWidthForLabel (nodeLabel nodeValue), layoutNodeHeight)
+    Rectangle -> (uniformBoxWidth, layoutNodeHeight)
+    RoundedRectangle -> (uniformBoxWidth, layoutNodeHeight)
 
 layoutBounds :: LaidOutGraph -> (Double, Double, Double, Double)
 layoutBounds graph =
-    case layoutNodes graph of
-        [] -> (-1.0, 1.0, -1.0, 1.0)
-        firstNode : restNodes ->
-            let firstModel = positionedNode firstNode
-                (firstWidth, firstHeight) = layoutNodeDimensions uniformBoxWidth firstModel
-                firstHalfWidth = firstWidth / 2.0
-                firstHalfHeight = firstHeight / 2.0
-                firstX = positionedX firstNode
-                firstY = positionedY firstNode
-                initialBounds =
-                    ( firstX - firstHalfWidth
-                    , firstX + firstHalfWidth
-                    , firstY - firstHalfHeight
-                    , firstY + firstHalfHeight
-                    )
-             in foldl updateBounds initialBounds restNodes
+  case layoutNodes graph of
+    [] -> (-1.0, 1.0, -1.0, 1.0)
+    firstNode : restNodes ->
+      let firstBounds = nodeBounds uniformBoxWidth firstNode
+       in foldl (updateBounds uniformBoxWidth) firstBounds restNodes
   where
     uniformBoxWidth = layoutUniformBoxWidth graph
 
-    updateBounds (minX, maxX, minY, maxY) positionedNodeValue =
-        let currentNode = positionedNode positionedNodeValue
-            (nodeWidth, nodeHeight) = layoutNodeDimensions uniformBoxWidth currentNode
-            halfWidth = nodeWidth / 2.0
-            halfHeight = nodeHeight / 2.0
-            nodeCenterX = positionedX positionedNodeValue
-            nodeCenterY = positionedY positionedNodeValue
-            leftEdge = nodeCenterX - halfWidth
-            rightEdge = nodeCenterX + halfWidth
-            bottomEdge = nodeCenterY - halfHeight
-            topEdge = nodeCenterY + halfHeight
-         in ( min minX leftEdge
-            , max maxX rightEdge
-            , min minY bottomEdge
-            , max maxY topEdge
-            )
+nodeBounds :: Double -> PositionedNode -> (Double, Double, Double, Double)
+nodeBounds uniformBoxWidth positionedNodeValue =
+  ( centerX - halfWidth
+  , centerX + halfWidth
+  , centerY - halfHeight
+  , centerY + halfHeight
+  )
+  where
+    currentNode = positionedNode positionedNodeValue
+    (nodeWidth, nodeHeightValue) = layoutNodeDimensions uniformBoxWidth currentNode
+    halfWidth = nodeWidth / 2.0
+    halfHeight = nodeHeightValue / 2.0
+    centerX = positionedX positionedNodeValue
+    centerY = positionedY positionedNodeValue
+
+updateBounds :: Double -> (Double, Double, Double, Double) -> PositionedNode -> (Double, Double, Double, Double)
+updateBounds uniformBoxWidth (minX, maxX, minY, maxY) positionedNodeValue =
+  ( min minX leftEdge
+  , max maxX rightEdge
+  , min minY bottomEdge
+  , max maxY topEdge
+  )
+  where
+    (leftEdge, rightEdge, bottomEdge, topEdge) = nodeBounds uniformBoxWidth positionedNodeValue

@@ -8,18 +8,18 @@ import Siren
 
 sampleGraph :: Either String Graph
 sampleGraph =
-    buildGraph
-        ( roundedNode "start" "Start"
-            <> node "read" "Read Input"
-            <> diamondNode "valid" "Valid?"
-            <> node "process" "Process"
-            <> roundedNode "done" "Done"
-            <> edge "start" "read"
-            <> edge "read" "valid"
-            <> edgeWithLabel "valid" "process" (Just "yes")
-            <> edgeWithLabel "valid" "done" (Just "no")
-            <> edge "process" "done"
-        )
+  buildGraph
+    ( roundedNode "start" "Start"
+        <> node "read" "Read Input"
+        <> diamondNode "valid" "Valid?"
+        <> node "process" "Process"
+        <> roundedNode "done" "Done"
+        <> edge "start" "read"
+        <> edge "read" "valid"
+        <> edgeWithLabel "valid" "process" (Just "yes")
+        <> edgeWithLabel "valid" "done" (Just "no")
+        <> edge "process" "done"
+    )
 
 writeSampleSvg :: FilePath -> IO (Either String FilePath)
 writeSampleSvg outputPath =

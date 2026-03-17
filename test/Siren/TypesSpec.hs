@@ -17,18 +17,18 @@ tests =
 
 unit_insertNodeReplaces :: IO ()
 unit_insertNodeReplaces = do
-    let firstNode = Node (NodeId "a") "Old" Rectangle
-        secondNode = Node (NodeId "a") "New" Diamond
-        graph = insertNode secondNode (insertNode firstNode emptyGraph)
-    assertEqual "Graph should contain exactly one node" 1 (Map.size (graphNodes graph))
-    assertEqual "Node data should be replaced by second insert" (Just secondNode) (Map.lookup (NodeId "a") (graphNodes graph))
+  let firstNode = Node (NodeId "a") "Old" Rectangle
+      secondNode = Node (NodeId "a") "New" Diamond
+      graph = insertNode secondNode (insertNode firstNode emptyGraph)
+  assertEqual "Graph should contain exactly one node" 1 (Map.size (graphNodes graph))
+  assertEqual "Node data should be replaced by second insert" (Just secondNode) (Map.lookup (NodeId "a") (graphNodes graph))
 
 unit_insertEdgePrepends :: IO ()
 unit_insertEdgePrepends = do
-    let edgeAB = Edge (NodeId "a") (NodeId "b") Nothing
-        edgeBC = Edge (NodeId "b") (NodeId "c") (Just "label")
-        graph = insertEdge edgeBC (insertEdge edgeAB emptyGraph)
-    assertEqual "Most recently inserted edge should be first" [edgeBC, edgeAB] (graphEdges graph)
+  let edgeAB = Edge (NodeId "a") (NodeId "b") Nothing
+      edgeBC = Edge (NodeId "b") (NodeId "c") (Just "label")
+      graph = insertEdge edgeBC (insertEdge edgeAB emptyGraph)
+  assertEqual "Most recently inserted edge should be first" [edgeBC, edgeAB] (graphEdges graph)
 
 prop_nodeIdRoundtrip :: String -> Property
 prop_nodeIdRoundtrip value = unNodeId (NodeId value) === value
