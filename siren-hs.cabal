@@ -53,6 +53,7 @@ executable siren-hs-exe
   build-depends:
       base >=4.7 && <5
     , directory
+    , optparse-applicative
     , siren-hs
   default-language: Haskell2010
 

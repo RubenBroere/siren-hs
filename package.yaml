@@ -50,6 +50,7 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - directory
+    - optparse-applicative
     - siren-hs
 
 tests:
