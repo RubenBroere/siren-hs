@@ -38,7 +38,7 @@ prop_chainRanksIncrease (Positive chainLengthRaw) =
     Right graph -> all edgeRespectsRank (graphEdges graph)
   where
     chainLength = max 2 (min 25 chainLengthRaw)
-    laidOut = either (const (LaidOutGraph [] [])) (layoutSugiyamaLike TopDown) (mkChainGraph chainLength)
+    laidOut = either (const (layoutSugiyamaLike TopDown emptyGraph)) (layoutSugiyamaLike TopDown) (mkChainGraph chainLength)
 
     edgeRespectsRank currentEdge =
       case (rankFor (edgeFrom currentEdge), rankFor (edgeTo currentEdge)) of

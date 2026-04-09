@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 {-| 
 Module      : Siren
 Description : Main module for the Siren graph library
@@ -33,13 +35,16 @@ providing a convenient single import for most use cases.
 
 module Siren
     ( writeGraphSvg
+    , writeGraphWith
     , module Siren.Types
     , module Siren.EDSL
+    , module Siren.Engine
     , module Siren.Layout
     )
 where
 
 import Siren.EDSL
+import Siren.Engine
 import Siren.Layout
 import Siren.Render.SVG (renderGraphToFile)
 import Siren.Types
@@ -59,3 +64,15 @@ writeGraphSvg :: FilePath   -- ^ Output SVG file path
               -> IO ()
 writeGraphSvg outputPath direction graph =
     renderGraphToFile outputPath (layoutSugiyamaLike direction graph)
+
+-- | Generic graph writing pipeline for custom layout/render engines.
+writeGraphWith ::
+    ( LayoutEngine engine
+    , RenderEngine renderer LaidOutGraph
+    ) =>
+    engine ->
+    renderer ->
+    FilePath ->
+    Graph ->
+    IO ()
+writeGraphWith = renderGraphWith

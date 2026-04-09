@@ -1,16 +1,3 @@
-{-|
-Module      : Siren.Types
-Description : Core data types for graph representation
-Copyright   : (c) Ruben Broere
-License     : See LICENSE file
-Maintainer  : ruben.broere@example.com
-Stability   : experimental
-
-This module defines the core data types used throughout the Siren library
-for representing directed graphs. It provides types for nodes, edges, and
-the graph structure itself, along with basic operations for constructing graphs.
--}
-
 module Siren.Types
   ( NodeId(..)
   , NodeShape(..)

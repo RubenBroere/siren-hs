@@ -39,6 +39,7 @@ library:
   - containers
   - diagrams-lib
   - diagrams-svg
+  - mtl
 
 executables:
   siren-hs-exe:

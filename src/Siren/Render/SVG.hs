@@ -1,14 +1,24 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 module Siren.Render.SVG
-  ( renderGraphToFile
+  ( SvgRenderer(..)
+  , renderGraphToFile
   )
 where
 
+import Control.Monad.Reader (Reader, asks, runReader)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Diagrams.Backend.SVG (B, renderSVG)
 import Diagrams.Prelude
-import Siren.Layout
+import Siren.Engine (RenderEngine(..))
+import Siren.Layout.Types
 import Siren.Types
+
+data SvgRenderer = SvgRenderer
+
+instance RenderEngine SvgRenderer LaidOutGraph where
+  renderLayout _ = renderGraphToFile
 
 data NodeGeometry = NodeGeometry
   { geometryNode :: Node
@@ -66,48 +76,45 @@ epsilon = 1.0e-9
 -- The output SVG dimensions are derived from the graph's layout bounds.
 renderGraphToFile :: FilePath -> LaidOutGraph -> IO ()
 renderGraphToFile outputPath graph =
-  renderSVG outputPath (dims2D canvasWidthPx canvasHeightPx) (drawGraph graph)
+  renderSVG outputPath (dims2D (viewportWidthPx viewport) (viewportHeightPx viewport)) (drawGraph graph)
   where
-    (canvasWidthPx, canvasHeightPx) = canvasSizePx graph
+    viewport = layoutViewport graph
 
-canvasSizePx :: LaidOutGraph -> (Double, Double)
-canvasSizePx graph = (canvasWidthUnits * unitsPerLayoutUnit, canvasHeightUnits * unitsPerLayoutUnit)
-  where
-    (minX, maxX, minY, maxY) = layoutBounds graph
-    canvasPadding = 1.4
-    unitsPerLayoutUnit = 120.0
-    canvasWidthUnits = max 1.0 ((maxX - minX) + 2 * canvasPadding)
-    canvasHeightUnits = max 1.0 ((maxY - minY) + 2 * canvasPadding)
+data RenderContext = RenderContext
+  { contextNodeGeometries :: Map NodeId NodeGeometry
+  , contextEdges :: [Edge]
+  }
 
 -- | Converts a laid-out graph into a Diagrams diagram.
 -- Draws edge shafts first, then nodes, then edge labels on top for readability.
 drawGraph :: LaidOutGraph -> QDiagram B V2 Double Any
-drawGraph graph =
-  drawEdges nodeGeometries (layoutEdges graph)
-    <> drawNodes nodeGeometries
-    <> drawEdgeLabels nodeGeometries (layoutEdges graph)
+drawGraph graph = runReader renderLayers context
   where
     nodeGeometries = buildNodeGeometries (layoutNodes graph)
+    context = RenderContext nodeGeometries (layoutEdges graph)
+
+    renderLayers :: Reader RenderContext (QDiagram B V2 Double Any)
+    renderLayers = do
+      nodeGeometryMap <- asks contextNodeGeometries
+      edges <- asks contextEdges
+      pure (drawEdges nodeGeometryMap edges <> drawNodes nodeGeometryMap <> drawEdgeLabels nodeGeometryMap edges)
 
 buildNodeGeometries :: [PositionedNode] -> Map NodeId NodeGeometry
 buildNodeGeometries positionedNodes =
-  Map.fromList (fmap (toNodeGeometry uniformBoxWidth) positionedNodes)
-  where
-    uniformBoxWidth = layoutUniformBoxWidth (LaidOutGraph positionedNodes [])
+  Map.fromList (fmap toNodeGeometry positionedNodes)
 
-toNodeGeometry :: Double -> PositionedNode -> (NodeId, NodeGeometry)
-toNodeGeometry uniformBoxWidth positioned =
+toNodeGeometry :: PositionedNode -> (NodeId, NodeGeometry)
+toNodeGeometry positioned =
   ( nodeId currentNode
   , NodeGeometry
       { geometryNode = currentNode
       , geometryCenter = p2 (positionedX positioned, positionedY positioned)
-      , geometryWidth = nodeBoxWidth
-      , geometryHeight = nodeBoxHeight
+      , geometryWidth = positionedWidth positioned
+      , geometryHeight = positionedHeight positioned
       }
   )
   where
     currentNode = positionedNode positioned
-    (nodeBoxWidth, nodeBoxHeight) = layoutNodeDimensions uniformBoxWidth currentNode
 
 -- | Draws all nodes as diagrams and combines them.
 drawNodes :: Map NodeId NodeGeometry -> QDiagram B V2 Double Any

@@ -27,7 +27,10 @@ library
   exposed-modules:
       Siren
       Siren.EDSL
+      Siren.Engine
       Siren.Layout
+      Siren.Layout.Sugiyama
+      Siren.Layout.Types
       Siren.Render.SVG
       Siren.Types
   other-modules:
@@ -40,6 +43,7 @@ library
     , containers
     , diagrams-lib
     , diagrams-svg
+    , mtl
   default-language: Haskell2010
 
 executable siren-hs-exe
