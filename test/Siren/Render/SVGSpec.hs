@@ -11,6 +11,7 @@ tests =
     testGroup
         "Siren.Render.SVG"
         [ testCase "renderGraphToFile writes an SVG file" unit_renderGraphToFileWritesFile
+        , testCase "dagre layout also renders to SVG" unit_renderDagreWritesFile
         ]
 
 unit_renderGraphToFileWritesFile :: IO ()
@@ -25,6 +26,20 @@ unit_renderGraphToFileWritesFile = do
 
     created <- doesFileExist outputPath
     assertBool "Expected renderGraphToFile to create the SVG file" created
+    removeIfExists outputPath
+
+unit_renderDagreWritesFile :: IO ()
+unit_renderDagreWritesFile = do
+    createDirectoryIfMissing True "output"
+    let outputPath = "output/test-render-dagre-svg-spec.svg"
+    removeIfExists outputPath
+
+    case buildGraph (node "start" "Start" <> node "middle" "Middle" <> node "end" "End" <> edge "start" "middle" <> edge "middle" "end") of
+        Left err -> assertFailure ("Failed to construct graph for rendering: " <> err)
+        Right graph -> renderGraphToFile outputPath (layoutDagre TopDown graph)
+
+    created <- doesFileExist outputPath
+    assertBool "Expected dagre layout render to create the SVG file" created
     removeIfExists outputPath
 
 removeIfExists :: FilePath -> IO ()

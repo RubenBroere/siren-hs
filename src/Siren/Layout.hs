@@ -8,6 +8,11 @@ module Siren.Layout
     -- * Sugiyama Layout Engine
   , SugiyamaLikeLayout(..)
   , layoutSugiyamaLike
+    -- * Dagre-Style Layout Engine
+  , DagreLayout(..)
+  , defaultDagreLayout
+  , layoutDagre
+  , layoutDagreWith
     -- * Layout Utilities
   , layoutUniformBoxWidth
   , layoutNodeDimensions
@@ -20,6 +25,12 @@ import Siren.Layout.Sugiyama
   , SugiyamaLikeLayout(..)
   , layoutSugiyamaLike
   , layoutNodeDimensions
+  )
+import Siren.Layout.Dagre
+  ( DagreLayout(..)
+  , defaultDagreLayout
+  , layoutDagre
+  , layoutDagreWith
   )
 import Siren.Layout.Types
   ( LayoutBounds(..)

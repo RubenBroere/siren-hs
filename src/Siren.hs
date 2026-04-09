@@ -35,6 +35,7 @@ providing a convenient single import for most use cases.
 
 module Siren
     ( writeGraphSvg
+    , writeGraphSvgDagre
     , writeGraphWith
     , module Siren.Types
     , module Siren.EDSL
@@ -64,6 +65,15 @@ writeGraphSvg :: FilePath   -- ^ Output SVG file path
               -> IO ()
 writeGraphSvg outputPath direction graph =
     renderGraphToFile outputPath (layoutSugiyamaLike direction graph)
+
+-- | Convenience function to layout and render a graph to an SVG file using
+-- a Dagre-style layered engine.
+writeGraphSvgDagre :: FilePath
+                   -> Direction
+                   -> Graph
+                   -> IO ()
+writeGraphSvgDagre outputPath direction graph =
+    renderGraphToFile outputPath (layoutDagre direction graph)
 
 -- | Generic graph writing pipeline for custom layout/render engines.
 writeGraphWith ::

@@ -29,6 +29,8 @@ library
       Siren.EDSL
       Siren.Engine
       Siren.Layout
+      Siren.Layout.Common
+      Siren.Layout.Dagre
       Siren.Layout.Sugiyama
       Siren.Layout.Types
       Siren.Render.SVG

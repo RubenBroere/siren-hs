@@ -97,7 +97,7 @@ drawGraph graph = runReader renderLayers context
     renderLayers = do
       nodeGeometryMap <- asks contextNodeGeometries
       edges <- asks contextEdges
-      pure (drawEdges nodeGeometryMap edges <> drawNodes nodeGeometryMap <> drawEdgeLabels nodeGeometryMap edges)
+      pure (drawEdgeLabels nodeGeometryMap edges <> drawEdges nodeGeometryMap edges <> drawNodes nodeGeometryMap)
 
 buildNodeGeometries :: [PositionedNode] -> Map NodeId NodeGeometry
 buildNodeGeometries positionedNodes =
@@ -185,12 +185,12 @@ lookupEdgeGeometries nodeGeometries currentEdge = do
 
 choosePerpendicular :: V2 Double -> V2 Double
 choosePerpendicular edgeVector =
-  if abs px > abs py
-    then perpendicular
-    else negated perpendicular
+  if py < 0
+    then negated perpendicular
+    else perpendicular
   where
     perpendicular = normalizedPerp edgeVector
-    V2 px py = perpendicular
+    V2 _ py = perpendicular
 
 edgeLabelWidth :: String -> Double
 edgeLabelWidth labelText =

@@ -1,10 +1,17 @@
 module Siren.EDSL
   ( GraphBuilder
   , node
+  , nodes
   , roundedNode
+  , roundedNodes
   , diamondNode
+  , diamondNodes
   , edge
+  , edges
+  , edgeL
   , edgeWithLabel
+  , labeledEdges
+  , chain
   , buildGraph
   )
 where
@@ -37,6 +44,10 @@ node nodeName labelText = GraphBuilder $ insertNode Node
   , nodeShape = Rectangle
   }
 
+-- | Creates many rectangular nodes from (id, label) pairs.
+nodes :: [(String, String)] -> GraphBuilder
+nodes = mconcat . fmap (uncurry node)
+
 -- | Creates a rounded rectangle node.
 roundedNode :: String -> String -> GraphBuilder
 roundedNode nodeName labelText = GraphBuilder $ insertNode Node
@@ -44,6 +55,10 @@ roundedNode nodeName labelText = GraphBuilder $ insertNode Node
   , nodeLabel = labelText
   , nodeShape = RoundedRectangle
   }
+
+-- | Creates many rounded rectangle nodes from (id, label) pairs.
+roundedNodes :: [(String, String)] -> GraphBuilder
+roundedNodes = mconcat . fmap (uncurry roundedNode)
 
 -- | Creates a diamond-shaped node.
 diamondNode :: String -> String -> GraphBuilder
@@ -53,9 +68,21 @@ diamondNode nodeName labelText = GraphBuilder $ insertNode Node
   , nodeShape = Diamond
   }
 
+-- | Creates many diamond nodes from (id, label) pairs.
+diamondNodes :: [(String, String)] -> GraphBuilder
+diamondNodes = mconcat . fmap (uncurry diamondNode)
+
 -- | Creates an unlabeled directed edge between two nodes.
 edge :: String -> String -> GraphBuilder
 edge fromNode toNode = edgeWithLabel fromNode toNode Nothing
+
+-- | Creates many unlabeled directed edges from (from, to) pairs.
+edges :: [(String, String)] -> GraphBuilder
+edges = mconcat . fmap (uncurry edge)
+
+-- | Creates a directed edge with a required label.
+edgeL :: String -> String -> String -> GraphBuilder
+edgeL fromNode toNode labelText = edgeWithLabel fromNode toNode (Just labelText)
 
 -- | Creates a directed edge with an optional label.
 edgeWithLabel :: String -> String -> Maybe String -> GraphBuilder
@@ -64,6 +91,18 @@ edgeWithLabel fromNode toNode maybeLabel = GraphBuilder $ insertEdge Edge
   , edgeTo = NodeId toNode
   , edgeLabel = maybeLabel
   }
+
+-- | Creates many labeled directed edges from (from, to, label) triples.
+labeledEdges :: [(String, String, String)] -> GraphBuilder
+labeledEdges = mconcat . fmap (\(fromNode, toNode, labelText) -> edgeL fromNode toNode labelText)
+
+-- | Creates an unlabeled path through a sequence of node ids.
+--
+-- @
+-- chain ["a", "b", "c"] == edge "a" "b" <> edge "b" "c"
+-- @
+chain :: [String] -> GraphBuilder
+chain nodeNames = edges (zip nodeNames (drop 1 nodeNames))
 
 -- | Validates and builds the final graph from a 'GraphBuilder'.
 buildGraph :: GraphBuilder -> Either String Graph
@@ -77,22 +116,22 @@ validateGraph graph =
 
 -- | Internal function to collect all edges that reference non-existent nodes.
 collectMissingReferences :: Map NodeId Node -> [Edge] -> [String]
-collectMissingReferences nodes = foldl' collectEdgeError []
+collectMissingReferences nodeMap = foldl' collectEdgeError []
   where
     collectEdgeError acc currentEdge =
-      case missingReferenceMessage nodes currentEdge of
+      case missingReferenceMessage nodeMap currentEdge of
         Nothing -> acc
         Just message -> message : acc
 
 missingReferenceMessage :: Map NodeId Node -> Edge -> Maybe String
-missingReferenceMessage nodes currentEdge =
+missingReferenceMessage nodeMap currentEdge =
   case (fromMissing, toMissing) of
     (False, False) -> Nothing
     (True, False) -> Just ("edge references unknown source node: " <> fromName)
     (False, True) -> Just ("edge references unknown target node: " <> toName)
     (True, True) -> Just ("edge references unknown nodes: " <> fromName <> ", " <> toName)
   where
-    fromMissing = Map.notMember (edgeFrom currentEdge) nodes
-    toMissing = Map.notMember (edgeTo currentEdge) nodes
+    fromMissing = Map.notMember (edgeFrom currentEdge) nodeMap
+    toMissing = Map.notMember (edgeTo currentEdge) nodeMap
     fromName = unNodeId (edgeFrom currentEdge)
     toName = unNodeId (edgeTo currentEdge)
