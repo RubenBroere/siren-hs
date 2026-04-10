@@ -1,68 +1,129 @@
 # siren-hs
 
-`siren-hs` is a Haskell-first graph visualization library and executable for flowchart-style diagrams.
-The current implementation provides a foundational pipeline from a typed EDSL to SVG output using `diagrams-svg`.
+`siren-hs` is a Haskell library and CLI for building directed flowchart-style graphs and rendering them to SVG.
 
-## Current status (Week 2 foundation)
+The project includes:
 
-The project now contains a working end-to-end baseline:
+- A typed graph model in `src/Siren/Types.hs`
+- A composable EDSL for graph construction in `src/Siren/EDSL.hs`
+- Two layered layout engines:
+	- Sugiyama-like (`src/Siren/Layout/Sugiyama.hs`)
+	- Dagre-style (`src/Siren/Layout/Dagre.hs`)
+- An SVG renderer based on `diagrams-svg` in `src/Siren/Render/SVG.hs`
+- A CLI application with sample graphs in `app/Main.hs` and `app/Samples.hs`
 
-- A typed graph model (`Node`, `Edge`, `Graph`) in `src/Siren/Types.hs`
-- A small EDSL for programmatic graph construction in `src/Siren/EDSL.hs`
-- A Sugiyama-like layered layout pass in `src/Siren/Layout.hs`
-- SVG rendering via `diagrams` / `diagrams-svg` in `src/Siren/Render/SVG.hs`
-- Public library API in `src/Siren.hs`
-- App-local sample graph module in `app/Samples.hs`
-- Executable entry point that generates an SVG in `app/Main.hs`
-- Baseline tests in `test/Spec.hs`
+## Features
 
-## What it can do now
+- Node shapes: rectangle, rounded rectangle, diamond
+- Directed edges with optional labels
+- Two layout strategies for hierarchical diagrams
+- Layout direction support (`TopDown`, `LeftRight`) in the library APIs
+- Batch rendering of all built-in sample graphs
 
-- Build flowchart graphs with node shapes: rectangle, rounded rectangle, diamond
-- Add directed edges with optional labels
-- Compute rank-based node layout (`TopDown` and `LeftRight`)
-- Render valid SVG output through the `diagrams-svg` backend
+## Installation and build
 
-## Quick start
+This project uses Stack.
 
-### Build and test
+```bash
+stack build
+```
+
+Run tests:
 
 ```bash
 stack test
 ```
 
-### Generate the sample SVG
+## CLI usage
+
+The executable expects a graph name and optionally a layout engine.
 
 ```bash
-stack run
+stack run -- GRAPH_NAME [--layout ENGINE]
 ```
 
-This writes the example diagram to:
+Short option for layout:
 
-- `output/sample.svg`
+```bash
+stack run -- GRAPH_NAME -l ENGINE
+```
+
+Where:
+
+- `ENGINE` is `sugiyama` (default) or `dagre`
+- Output is written to `output/<graph>-<engine>.svg`
+
+### Available graph names
+
+- `sample`
+- `bugged`
+- `chain`
+- `diamond-merge`
+- `fan-in`
+- `crossing-bipartite`
+- `long-label`
+- `multi-source-sink`
+- `cycle`
+- `dense-layered`
+- `disconnected`
+- `ladder`
+
+### Render one graph
+
+```bash
+stack run -- sample
+stack run -- long-label --layout dagre
+```
+
+### Render all built-in samples with both engines
+
+```bash
+stack run -- all
+```
+
+This generates 24 SVG files (12 samples x 2 engines) in `output/`.
 
 ## Library usage
 
-The top-level API is exported from `Siren`.
+Import the top-level `Siren` module:
 
-Key exported values/functions:
+```haskell
+import Siren
+```
+
+Common convenience functions:
 
 - `writeGraphSvg :: FilePath -> Direction -> Graph -> IO ()`
+- `writeGraphSvgDagre :: FilePath -> Direction -> Graph -> IO ()`
+- `writeGraphWith :: (LayoutEngine engine, RenderEngine renderer LaidOutGraph) => engine -> renderer -> FilePath -> Graph -> IO ()`
 
-Sample/demo helpers (`sampleGraph`, `writeSampleSvg`) are intentionally kept in `app/Samples.hs` so they do not leak into the public library API.
+Minimal example:
 
-## Project workflow (`stack` + `hpack`)
+```haskell
+import Siren
 
-This repository uses `package.yaml` as the source of truth.
+main :: IO ()
+main =
+	case buildGraph (node "start" "Start" <> node "end" "End" <> edge "start" "end") of
+		Left err -> putStrLn err
+		Right g -> writeGraphSvg "output/example.svg" TopDown g
+```
 
-- Edit dependencies/components in `package.yaml`
-- Let Stack generate `siren-hs.cabal` automatically (`stack build` / `stack test`)
-- Do not hand-edit generated `siren-hs.cabal`
+## Project structure
 
-## Next steps
+- `src/Siren.hs`: top-level public API
+- `src/Siren/Types.hs`: core graph types
+- `src/Siren/EDSL.hs`: graph construction DSL
+- `src/Siren/Layout/*.hs`: layout engines and shared layout types/utilities
+- `src/Siren/Render/SVG.hs`: SVG rendering backend
+- `app/Main.hs`: CLI entry point
+- `app/Samples.hs`: sample graphs used by the CLI
+- `test/`: test suite (`tasty`, `tasty-hunit`, `tasty-quickcheck`)
 
-Planned next milestones include:
+## Development notes
 
-- Improving layout quality (crossing reduction and coordinate refinement)
-- Expanding examples and test coverage
-- Adding parser/CLI as stretch goals after core library stabilization
+This repository uses `package.yaml` (hpack) as the source of truth.
+
+- Edit package metadata and dependencies in `package.yaml`
+- Let Stack/hpack regenerate `siren-hs.cabal`
+- Avoid manual edits to generated Cabal fields
